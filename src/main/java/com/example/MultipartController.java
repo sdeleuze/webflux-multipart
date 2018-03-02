@@ -17,14 +17,15 @@
 package com.example;
 
 import java.io.File;
-import java.util.Map;
 
-import reactor.core.publisher.Mono;
+import reactor.core.publisher.Flux;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.http.codec.multipart.Part;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -34,9 +35,8 @@ public class MultipartController {
 	private String dir;
 
 	@PostMapping("/upload")
-	Mono<String> upload(@RequestParam Map<String, Part> parts) {
-		Part filePart = parts.get("files");
-		filePart.transferTo(new File(dir + "/" + filePart.getFilename().get()));
-		return parts.get("submit-name").getContentAsString();
+	Flux<DataBuffer> upload(@RequestPart("files") FilePart filePart, @RequestPart("submit-name") Part namePart) {
+		return filePart.transferTo(new File(dir + "/" + filePart.filename()))
+				.thenMany(namePart.content());
 	}
 }
