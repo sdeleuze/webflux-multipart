@@ -17,13 +17,12 @@
 package com.example;
 
 import java.io.File;
-import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.codec.multipart.Part;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.reactive.function.BodyExtractors;
 import org.springframework.web.reactive.function.server.RequestPredicates;
 import org.springframework.web.reactive.function.server.RouterFunction;
@@ -40,10 +39,9 @@ public class MultipartRoute {
 	RouterFunction<ServerResponse> multipartRouter() {
 		return RouterFunctions.route(RequestPredicates.POST("/upload"), request ->
 				request.body(BodyExtractors.toMultipartData()).flatMap(parts -> {
-					Map<String, Part> map = parts.toSingleValueMap();
-					Part filePart = map.get("files");
-					filePart.transferTo(new File(dir + "/" + filePart.getFilename().get()));
-					return ServerResponse.ok().body(map.get("submit-name").getContentAsString(), String.class);
+					FilePart filePart = (FilePart) parts.getFirst("files");
+					return filePart.transferTo(new File(dir + "/" + filePart.filename()))
+						.then(ServerResponse.ok().body(parts.getFirst("submit-name").content(), DataBuffer.class));
 				}
 		)).and(RouterFunctions.resources("/**", new ClassPathResource("static/")));
 	}
